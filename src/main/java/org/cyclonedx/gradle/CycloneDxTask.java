@@ -1,4 +1,4 @@
-/*
+ /*
  * This file is part of CycloneDX Gradle Plugin.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -83,44 +83,25 @@ public class CycloneDxTask extends DefaultTask {
     private static final String MESSAGE_SKIPPING = "Skipping CycloneDX";
 
     private File buildDir;
+    private CycloneDxPluginExtension extension;
     private MavenHelper mavenHelper;
-    private CycloneDxSchema.Version schemaVersion = CycloneDxSchema.Version.VERSION_13;
     private boolean includeBomSerialNumber;
     private boolean skip;
     private String projectType;
-    private final List<String> includeConfigs = new ArrayList<>();
-    private final List<String> skipConfigs = new ArrayList<>();
     private final Map<File, List<Hash>> artifactHashes = Collections.synchronizedMap(new HashMap<>());
     private final Map<String, MavenProject> resolvedMavenProjects = Collections.synchronizedMap(new HashMap<>());
-
-    @Input
-    public List<String> getIncludeConfigs() {
-        return includeConfigs;
-    }
-
-    public void setIncludeConfigs(Collection<String> includeConfigs) {
-        this.includeConfigs.clear();
-        this.includeConfigs.addAll(includeConfigs);
-    }
-
-    @Input
-    public List<String> getSkipConfigs() {
-    	return skipConfigs;
-    }
-
-    public void setSkipConfigs(Collection<String> skipConfigs) {
-    	this.skipConfigs.clear();
-    	this.skipConfigs.addAll(skipConfigs);
-    }
 
     public void setBuildDir(File buildDir) {
         this.buildDir = buildDir;
     }
 
+    public void setExtension(CycloneDxPluginExtension extension) {
+        this.extension = extension;
+    }
+
     private void initialize() {
-        schemaVersion = schemaVersion();
-        mavenHelper = new MavenHelper(getLogger(), schemaVersion);
-        if (schemaVersion == CycloneDxSchema.Version.VERSION_10) {
+        mavenHelper = new MavenHelper(getLogger(), extension.schemaVersion);
+        if (extension.schemaVersion == CycloneDxSchema.Version.VERSION_10) {
             includeBomSerialNumber = false;
         } else {
             includeBomSerialNumber = getBooleanParameter("cyclonedx.includeBomSerialNumber", true);
@@ -307,7 +288,7 @@ public class CycloneDxTask extends DefaultTask {
         getLogger().debug(MESSAGE_CALCULATING_HASHES);
         List<Hash> hashes = artifactHashes.computeIfAbsent(artifact.getFile(), f -> {
             try {
-                return BomUtils.calculateHashes(f, schemaVersion);
+                return BomUtils.calculateHashes(f, extension.schemaVersion);
             } catch(IOException e) {
                 getLogger().error("Error encountered calculating hashes", e);
             }
@@ -315,7 +296,7 @@ public class CycloneDxTask extends DefaultTask {
         });
         component.setHashes(hashes);
 
-        if (schemaVersion().getVersion() >= 1.1) {
+        if (extension.schemaVersion.getVersion() >= 1.1) {
             component.setModified(mavenHelper.isModified(artifact));
         }
 
@@ -334,11 +315,11 @@ public class CycloneDxTask extends DefaultTask {
     }
 
     private boolean shouldIncludeConfiguration(Configuration configuration) {
-        return includeConfigs.isEmpty() || includeConfigs.contains(configuration.getName());
+        return extension.includeConfigs.isEmpty() || extension.includeConfigs.contains(configuration.getName());
     }
 
     private boolean shouldSkipConfiguration(Configuration configuration) {
-        return skipConfigs.contains(configuration.getName());
+        return extension.skipConfigs.contains(configuration.getName());
     }
 
     private String generatePackageUrl(final ResolvedArtifact artifact) {
@@ -372,14 +353,14 @@ public class CycloneDxTask extends DefaultTask {
         try {
             getLogger().info(MESSAGE_CREATING_BOM);
             final Bom bom = new Bom();
-            if (CycloneDxSchema.Version.VERSION_10 != schemaVersion && includeBomSerialNumber) {
+            if (CycloneDxSchema.Version.VERSION_10 != extension.schemaVersion && includeBomSerialNumber) {
                 bom.setSerialNumber("urn:uuid:" + UUID.randomUUID().toString());
             }
             bom.setMetadata(metadata);
             bom.setComponents(new ArrayList<>(components));
-            writeXMLBom(schemaVersion, bom);
-            if (schemaVersion().getVersion() >= 1.2) {
-                writeJSONBom(schemaVersion, bom);
+            writeXMLBom(extension.schemaVersion, bom);
+            if (extension.schemaVersion.getVersion() >= 1.2) {
+                writeJSONBom(extension.schemaVersion, bom);
             }
         } catch (GeneratorException | ParserConfigurationException | IOException e) {
             throw new GradleException("An error occurred executing " + this.getClass().getName(), e);
@@ -446,33 +427,11 @@ public class CycloneDxTask extends DefaultTask {
         return defaultValue;
     }
 
-    /**
-     * Resolves the CycloneDX schema the mojo has been requested to use.
-     * @return the CycloneDX schema to use
-     */
-    private CycloneDxSchema.Version schemaVersion() {
-        final Project project = super.getProject();
-        final String version;
-        if (project.hasProperty("cyclonedx.schemaVersion")) {
-            version = (String)project.getProperties().get("cyclonedx.schemaVersion");
-        } else {
-            version = getStringParameter("schemaVersion", CycloneDxSchema.Version.VERSION_13.getVersionString());
-        }
-        if ("1.0".equals(version)) {
-            return CycloneDxSchema.Version.VERSION_10;
-        } else if ("1.1".equals(version)) {
-            return CycloneDxSchema.Version.VERSION_11;
-        } else if ("1.2".equals(version)) {
-            return CycloneDxSchema.Version.VERSION_12;
-        }
-        return CycloneDxSchema.Version.VERSION_13;
-    }
-
     protected void logParameters() {
         if (getLogger().isInfoEnabled()) {
             getLogger().info("CycloneDX: Parameters");
             getLogger().info("------------------------------------------------------------------------");
-            getLogger().info("schemaVersion          : " + schemaVersion.name());
+            getLogger().info("schemaVersion          : " + extension.schemaVersion.name());
             getLogger().info("includeBomSerialNumber : " + includeBomSerialNumber);
             getLogger().info("------------------------------------------------------------------------");
         }

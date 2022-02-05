@@ -24,9 +24,11 @@ import org.gradle.api.Project;
 public class CycloneDxPlugin implements Plugin<Project> {
 
     public void apply(Project project) {
+        CycloneDxPluginExtension extension = project.getExtensions().create("cyclonedxBom", CycloneDxPluginExtension.class);
         project.getTasks().create("cyclonedxBom", CycloneDxTask.class, (task) -> {
             task.setGroup("Reporting");
             task.setBuildDir(project.getBuildDir());
+            task.setExtension(extension);
         });
     }
 }
