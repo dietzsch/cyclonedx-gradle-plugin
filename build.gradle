@@ -12,16 +12,16 @@ repositories {
 }
 
 dependencies {
-    compile(group: 'org.cyclonedx', name: 'cyclonedx-core-java', version: '5.0.4') {
+    implementation(group: 'org.cyclonedx', name: 'cyclonedx-core-java', version: '5.0.4') {
         // gradle-api already includes an slf4j binding
         exclude group: 'org.apache.logging.log4j', module: 'log4j-slf4j-impl'
     }
-    compile 'commons-codec:commons-codec:1.15'
-    compile 'commons-io:commons-io:2.8.0'
-    compile 'org.apache.maven:maven-core:3.5.0'
+    implementation 'commons-codec:commons-codec:1.15'
+    implementation 'commons-io:commons-io:2.8.0'
+    implementation 'org.apache.maven:maven-core:3.5.0'
 
     testImplementation gradleTestKit()
-    testImplementation("org.spockframework:spock-core:1.1-groovy-2.4") {
+    testImplementation("org.spockframework:spock-core:2.0-groovy-3.0") {
         exclude module: 'groovy-all'
     }
 }
@@ -29,8 +29,8 @@ dependencies {
 group = 'com.cyclonedx'
 version = '1.5.0-SNAPSHOT'
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
@@ -44,15 +44,6 @@ pluginBundle {
         cycloneDxPlugin {
             displayName = 'CycloneDX BOM Generator'
             description = 'The CycloneDX Gradle plugin creates an aggregate of all direct and transitive dependencies of a project and creates a valid CycloneDX Software Bill of Materials (SBOM).'
-        }
-    }
-}
-
-gradlePlugin {
-    plugins {
-        cycloneDxPlugin {
-            id = 'org.cyclonedx.bom'
-            implementationClass = 'org.cyclonedx.gradle.CycloneDxPlugin'
         }
     }
 }
